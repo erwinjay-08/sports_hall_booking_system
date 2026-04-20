@@ -8,13 +8,12 @@
                 <element inactive_on_update="false" label="Approved" sequence="1" value="approved"/>
             </choice>
         </element>
-        <element label="Start Time" max_length="40" name="start_time" type="glide_time"/>
         <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="number" type="string"/>
-        <element label="Requested by" max_length="32" name="requested_by" reference="sys_user" type="reference"/>
-        <element label="End Time" max_length="40" name="end_time" type="glide_time"/>
+        <element label="Start Date" max_length="40" name="start_date" type="glide_date_time"/>
+        <element label="End Date" max_length="40" name="end_date" type="glide_date_time"/>
+        <element label="Requested by" max_length="32" name="requested_by" reference="sys_user" reference_qual="roles=x_1954179_sports_0.user" reference_qual_condition="roles=x_1954179_sports_0.user" type="reference"/>
         <element label="Purpose" max_length="500" name="purpose" type="string"/>
         <element label="Sports Hall" max_length="32" name="sports_hall" reference="x_1954179_sports_0_sports_hall" type="reference"/>
-        <element label="Booking Date" max_length="40" name="booking_date" type="glide_date"/>
         <element label="Admin Notes" max_length="500" name="admin_notes" type="string"/>
         <index name="index">
             <element name="requested_by"/>

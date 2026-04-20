@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sc_cat_item_category">
+    <sc_cat_item_category action="INSERT_OR_UPDATE">
+        <sc_cat_item display_value="Book a Sports Hall">9d794a628390831070a1c8efeeaad34a</sc_cat_item>
+        <sc_category display_value="Sports Hall Bookings">fa190e228390831070a1c8efeeaad30c</sc_category>
+        <sys_class_name>sc_cat_item_category</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-20 03:56:57</sys_created_on>
+        <sys_id>b14a46e28390831070a1c8efeeaad38f</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_name>Sports Hall Bookings.Book a Sports Hall</sys_name>
+        <sys_package display_value="Sports Hall Booking System" source="x_1954179_sports_0">476db52a8310831070a1c8efeeaad373</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Sports Hall Booking System">476db52a8310831070a1c8efeeaad373</sys_scope>
+        <sys_update_name>sc_cat_item_category_b14a46e28390831070a1c8efeeaad38f</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-20 03:56:57</sys_updated_on>
+    </sc_cat_item_category>
+</record_update>
