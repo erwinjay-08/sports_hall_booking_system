@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="d54f352e8310831070a1c8efeeaad3df" label="Sports Hall Booking" max_length="40" name="x_1954179_sports_0_sports_hall_booking" type="collection">
+        <element choice="3" default="pending" label="Status" max_length="40" name="status" type="choice">
+            <choice>
+                <element inactive_on_update="false" label="Rejected" sequence="2" value="rejected"/>
+                <element inactive_on_update="false" label="Pending" sequence="0" value="pending"/>
+                <element inactive_on_update="false" label="Cancelled" sequence="3" value="cancelled"/>
+                <element inactive_on_update="false" label="Approved" sequence="1" value="approved"/>
+            </choice>
+        </element>
+        <element label="Start Time" max_length="40" name="start_time" type="glide_time"/>
+        <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="number" type="string"/>
+        <element label="Requested by" max_length="32" name="requested_by" reference="sys_user" type="reference"/>
+        <element label="End Time" max_length="40" name="end_time" type="glide_time"/>
+        <element label="Purpose" max_length="500" name="purpose" type="string"/>
+        <element label="Sports Hall" max_length="32" name="sports_hall" reference="x_1954179_sports_0_sports_hall" type="reference"/>
+        <element label="Booking Date" max_length="40" name="booking_date" type="glide_date"/>
+        <element label="Admin Notes" max_length="500" name="admin_notes" type="string"/>
+        <index name="index">
+            <element name="requested_by"/>
+        </index>
+        <index name="index2">
+            <element name="sports_hall"/>
+        </index>
+    </element>
+</database>

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?><database>
+    <element db_object_id="d1edb56a8310831070a1c8efeeaad38e" label="Sports Hall" max_length="40" name="x_1954179_sports_0_sports_hall" type="collection">
+        <element label="Location" max_length="200" name="location" type="string"/>
+        <element label="Available" max_length="40" name="available" type="boolean"/>
+        <element display="true" label="Hall Name" max_length="100" name="hall_name" type="string"/>
+        <element attributes="edge_encryption_enabled=true" default="javascript:global.getNextObjNumberPadded();" label="Number" max_length="40" name="number" type="string"/>
+        <element label="Capacity" max_length="40" name="capacity" type="integer"/>
+        <element label="Facilities" max_length="500" name="facilities" type="string"/>
+    </element>
+</database>
