@@ -1,0 +1,243 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope) {
+    var c = this;
+    c.filter = 'all';
+    
+    c.setFilter = function(filter) {
+        c.filter = filter;
+    };
+    
+    c.filteredBookings = function() {
+        if (c.filter == 'all') {
+            return $scope.data.bookings;
+        }
+        return $scope.data.bookings.filter(function(b) {
+            return b.status == c.filter;
+        });
+    };
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.my-bookings {
+  margin-top: 25px;
+  background: white;
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  
+  h3 {
+    color: #00695C;
+    font-weight: bold;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #00695C;
+  }
+  
+  .booking-tabs {
+    display: flex;
+    gap: 10px;
+    
+    .tab-btn {
+      padding: 8px 20px;
+      border-radius: 20px;
+      border: 1px solid #00695C;
+      background: white;
+      color: #00695C;
+      cursor: pointer;
+      
+      &amp;.active {
+        background: #00695C;
+        color: white;
+      }
+      
+      &amp;:hover {
+        background: #E0F2F1;
+      }
+    }
+  }
+  
+  .bookings-table {
+    thead tr {
+      background: #00695C;
+      
+      th {
+        color: white;
+        font-weight: bold;
+        border: none;
+        padding: 12px 15px;
+      }
+    }
+    
+    tbody tr {
+      &amp;:hover {
+        background: #E0F2F1;
+      }
+      
+      td {
+        padding: 12px 15px;
+        vertical-align: middle;
+      }
+    }
+  }
+  
+  .status-badge {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    
+    &amp;.badge-pending {
+      background: #FFF3E0;
+      color: #E65100;
+    }
+    
+    &amp;.badge-approved {
+      background: #E8F5E9;
+      color: #2E7D32;
+    }
+    
+    &amp;.badge-rejected {
+      background: #FFEBEE;
+      color: #C62828;
+    }
+  }
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>my_bookings_widget</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {  }]]></link>
+        <name>My Bookings Widget</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+    var gr = new GlideRecord(
+        'x_1954179_sports_0_sports_hall_booking'
+    );
+    gr.addQuery('requested_by', gs.getUserID());
+    gr.orderByDesc('sys_created_on');
+    gr.query();
+    
+    data.bookings = [];
+    while (gr.next()) {
+        data.bookings.push({
+            number: gr.getValue('number'),
+            hall: gr.getDisplayValue('sports_hall'),
+            startDate: gr.getDisplayValue('start_date'),
+            endDate: gr.getDisplayValue('end_date'),
+            purpose: gr.getValue('purpose'),
+            status: gr.getValue('status')
+        });
+    }
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-22 02:55:45</sys_created_on>
+        <sys_id>7c7f88978350c71070a1c8efeeaad3b6</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>My Bookings Widget</sys_name>
+        <sys_package display_value="Sports Hall Booking System" source="x_1954179_sports_0">476db52a8310831070a1c8efeeaad373</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Sports Hall Booking System">476db52a8310831070a1c8efeeaad373</sys_scope>
+        <sys_update_name>sp_widget_7c7f88978350c71070a1c8efeeaad3b6</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-22 03:30:30</sys_updated_on>
+        <template><![CDATA[<div class="my-bookings">
+  <h3>My Bookings</h3>
+  
+  <!-- Filter tabs -->
+  <div class="booking-tabs">
+    <button class="tab-btn"
+            ng-class="{'active': c.filter == 'all'}"
+            ng-click="c.setFilter('all')">
+      All
+    </button>
+    <button class="tab-btn"
+            ng-class="{'active': c.filter == 'Pending'}"
+            ng-click="c.setFilter('Pending')">
+      Pending
+    </button>
+    <button class="tab-btn"
+            ng-class="{'active': c.filter == 'Approved'}"
+            ng-click="c.setFilter('Approved')">
+      Approved
+    </button>
+    <button class="tab-btn"
+            ng-class="{'active': c.filter == 'Rejected'}"
+            ng-click="c.setFilter('Rejected')">
+      Rejected
+    </button>
+  </div>
+  
+  <!-- Bookings Table -->
+  <div style="overflow-x: auto; margin-top: 15px;">
+    <table class="table bookings-table">
+      <thead>
+        <tr>
+          <th>Reference</th>
+          <th>Sports Hall</th>
+          <th>Start Date</th>
+          <th>End Date</th>
+          <th>Purpose</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr ng-repeat="booking in c.filteredBookings()">
+          <td>{{booking.number}}</td>
+          <td>{{booking.hall}}</td>
+          <td>{{booking.startDate}}</td>
+          <td>{{booking.endDate}}</td>
+          <td>{{booking.purpose || 'N/A'}}</td>
+          <td>
+            <span class="status-badge"
+                  ng-class="{
+                    'badge-pending': booking.status == 'Pending',
+                    'badge-approved': booking.status == 'Approved',
+                    'badge-rejected': booking.status == 'Rejected'
+                  }">
+              {{booking.status}}
+            </span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    
+    <!-- No bookings -->
+    <div ng-if="c.filteredBookings().length == 0"
+         style="text-align: center; 
+                padding: 30px; 
+                color: #999;">
+      No bookings found.
+      <br/>
+      <a href="/sports_hall?id=sports_hall_booking"
+         class="btn btn-primary"
+         style="margin-top: 15px; 
+                border-radius: 20px;
+                background: #00695C;
+                border: none;">
+        Book a Hall
+      </a>
+    </div>
+  </div>
+</div>]]></template>
+    </sp_widget>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>7c7f88978350c71070a1c8efeeaad3b6</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-22 02:55:45</sys_created_on>
+        <sys_id>707f88978350c71070a1c8efeeaad3bb</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-22 02:55:45</sys_updated_on>
+        <table>sp_widget</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

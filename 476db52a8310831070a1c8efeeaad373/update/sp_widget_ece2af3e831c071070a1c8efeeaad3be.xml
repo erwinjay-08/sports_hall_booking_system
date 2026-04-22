@@ -1,0 +1,347 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[api.controller = function($scope) {
+    var c = this;
+    
+    c.form = {
+        hallId: '',
+        startDate: '',
+        endDate: '',
+        purpose: ''
+    };
+    
+    c.availabilityMessage = '';
+    c.isAvailable = false;
+    c.successMessage = '';
+    c.errorMessage = '';
+    
+    // Check Availability
+    c.checkAvailability = function() {
+        c.availabilityMessage = '';
+        c.isAvailable = false;
+        
+        if (!c.form.hallId || !c.form.startDate || !c.form.endDate) {
+            c.availabilityMessage = 
+            'Please select a hall, start date, and end date first.';
+            return;
+        }
+        
+        if (c.form.endDate <= c.form.startDate) {
+            c.availabilityMessage = 
+            'End Date must be after Start Date.';
+            return;
+        }
+        
+        var ga = new GlideAjax('SportsHallAvailabilityAjax');
+        ga.addParam('sysparm_name', 'checkAvailability');
+        ga.addParam('sysparm_hall_id', c.form.hallId);
+        ga.addParam('sysparm_start_date', c.form.startDate);
+        ga.addParam('sysparm_end_date', c.form.endDate);
+        
+        ga.getXMLAnswer(function(response) {
+            if (response == 'available') {
+                c.availabilityMessage = 'Hall is available for your selected dates!';
+                c.isAvailable = true;
+            } else {
+                c.availabilityMessage = 
+                'Sorry, this hall is already booked for the selected time.';
+                c.isAvailable = false;
+            }
+            $scope.$apply();
+        });
+    };
+    
+    // Submit Booking
+    c.submitBooking = function() {
+        if (!c.isAvailable) {
+            c.errorMessage = 'Please check availability first.';
+            return;
+        }
+        
+        c.server.get({
+            action: 'submitBooking',
+            hallId: c.form.hallId,
+            startDate: c.form.startDate,
+            endDate: c.form.endDate,
+            purpose: c.form.purpose
+        }).then(function(response) {
+            if (response.data.result == 'success') {
+                c.successMessage = 
+                'Booking submitted successfully! Reference: ' 
+                + response.data.number;
+                c.errorMessage = '';
+                // Reset form
+                c.form = {
+                    hallId: '',
+                    startDate: '',
+                    endDate: '',
+                    purpose: ''
+                };
+                c.isAvailable = false;
+                c.availabilityMessage = '';
+            } else {
+                c.errorMessage = 'Error submitting booking. Please try again.';
+            }
+            $scope.$apply();
+        });
+    };
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.booking-form-container {
+  padding: 25px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  
+  h3 {
+    color: #00695C;
+    font-weight: bold;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #00695C;
+  }
+  
+  label {
+    color: #333;
+    font-size: 13px;
+    margin-bottom: 5px;
+  }
+  
+  .form-control {
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    
+    &amp;:focus {
+      border-color: #00695C;
+      box-shadow: 0 0 5px rgba(0,105,92,0.3);
+    }
+  }
+  
+  .btn-info {
+    background: #00838F;
+    border: none;
+    border-radius: 20px;
+    padding: 8px 20px;
+    
+    &amp;:hover {
+      background: #006064;
+    }
+  }
+  
+  .btn-primary {
+    background: #00695C;
+    border: none;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    margin-top: 10px;
+    
+    &amp;:hover {
+      background: #004D40;
+    }
+    
+    &amp;:disabled {
+      background: #B2DFDB;
+      cursor: not-allowed;
+    }
+  }
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>sports_hall_booking_form</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {  }]]></link>
+        <name>Sports Hall Booking Form</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+    // Handle booking submission
+    if (input && input.action == 'submitBooking') {
+        var gr = new GlideRecord(
+            'x_1954179_sports_0_sports_hall_booking'
+        );
+        gr.initialize();
+        gr.setValue('sports_hall', input.hallId);
+        gr.setValue('requested_by', gs.getUserID());
+        gr.setValue('start_date', input.startDate);
+        gr.setValue('end_date', input.endDate);
+        gr.setValue('purpose', input.purpose);
+        gr.setValue('status', 'Pending');
+        var sysId = gr.insert();
+        
+        if (sysId) {
+            // Get the booking number
+            var booking = new GlideRecord(
+                'x_1954179_sports_0_sports_hall_booking'
+            );
+            booking.get(sysId);
+            data.result = 'success';
+            data.number = booking.getValue('number');
+        } else {
+            data.result = 'error';
+        }
+        return;
+    }
+    
+    // Load sports halls for dropdown
+    var gr = new GlideRecord('x_1954179_sports_0_sports_hall');
+    gr.addQuery('available', true);
+    gr.orderBy('hall_name');
+    gr.query();
+    
+    data.halls = [];
+    while (gr.next()) {
+        data.halls.push({
+            sys_id: gr.getUniqueValue(),
+            name: gr.getValue('hall_name')
+        });
+    }
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-21 05:02:33</sys_created_on>
+        <sys_id>ece2af3e831c071070a1c8efeeaad3be</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Sports Hall Booking Form</sys_name>
+        <sys_package display_value="Sports Hall Booking System" source="x_1954179_sports_0">476db52a8310831070a1c8efeeaad373</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Sports Hall Booking System">476db52a8310831070a1c8efeeaad373</sys_scope>
+        <sys_update_name>sp_widget_ece2af3e831c071070a1c8efeeaad3be</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-22 02:52:42</sys_updated_on>
+        <template><![CDATA[<div class="booking-form-container">
+  <div style="padding: 20px; 
+            background: white; 
+            border-radius: 8px; 
+            border: 1px solid #ddd;">
+            
+  <h3 style="color: #333; margin-bottom: 20px;">
+    Book a Sports Hall
+  </h3>
+
+  <!-- Success Message -->
+  <div ng-if="c.successMessage"
+       style="background: #4CAF50; 
+              color: white; 
+              padding: 12px; 
+              border-radius: 6px; 
+              margin-bottom: 15px;">
+    {{c.successMessage}}
+  </div>
+
+  <!-- Error Message -->
+  <div ng-if="c.errorMessage"
+       style="background: #f44336; 
+              color: white; 
+              padding: 12px; 
+              border-radius: 6px; 
+              margin-bottom: 15px;">
+    {{c.errorMessage}}
+  </div>
+
+  <!-- Sports Hall Dropdown -->
+  <div style="margin-bottom: 15px;">
+    <label style="font-weight: bold; 
+                  display: block; 
+                  margin-bottom: 5px;">
+      Sports Hall *
+    </label>
+    <select class="form-control" 
+            ng-model="c.form.hallId"
+            ng-options="hall.sys_id as hall.name for hall in data.halls">
+      <option value="">-- Select a Sports Hall --</option>
+    </select>
+  </div>
+
+  <!-- Start Date -->
+  <div style="margin-bottom: 15px;">
+    <label style="font-weight: bold; 
+                  display: block; 
+                  margin-bottom: 5px;">
+      Start Date & Time *
+    </label>
+    <input type="datetime-local" 
+           class="form-control"
+           ng-model="c.form.startDate"/>
+  </div>
+
+  <!-- End Date -->
+  <div style="margin-bottom: 15px;">
+    <label style="font-weight: bold; 
+                  display: block; 
+                  margin-bottom: 5px;">
+      End Date & Time *
+    </label>
+    <input type="datetime-local" 
+           class="form-control"
+           ng-model="c.form.endDate"/>
+  </div>
+
+  <!-- Purpose -->
+  <div style="margin-bottom: 15px;">
+    <label style="font-weight: bold; 
+                  display: block; 
+                  margin-bottom: 5px;">
+      Purpose
+    </label>
+    <textarea class="form-control" 
+              rows="3"
+              ng-model="c.form.purpose"
+              placeholder="Enter the purpose of your booking...">
+    </textarea>
+  </div>
+
+  <!-- Check Availability Button -->
+  <button class="btn btn-info"
+          style="margin-right: 10px; margin-bottom: 10px;"
+          ng-click="c.checkAvailability()">
+    Check Availability
+  </button>
+
+  <!-- Availability Result -->
+  <div ng-if="c.availabilityMessage"
+       style="margin-bottom: 15px; 
+              padding: 10px; 
+              border-radius: 6px;"
+       ng-style="{'background': c.isAvailable ? '#E8F5E9' : '#FFEBEE',
+                  'color': c.isAvailable ? 'green' : 'red'}">
+    {{c.availabilityMessage}}
+  </div>
+
+  <!-- Submit Button -->
+  <button class="btn btn-primary btn-block"
+          ng-click="c.submitBooking()"
+          ng-disabled="!c.isAvailable">
+    Submit Booking Request
+  </button>
+  
+  <p style="color: #999; 
+            font-size: 12px; 
+            margin-top: 10px;">
+    * Required fields. Please check availability before submitting.
+  </p>
+</div>
+</div>
+
+]]></template>
+    </sp_widget>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>ece2af3e831c071070a1c8efeeaad3be</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-21 05:02:33</sys_created_on>
+        <sys_id>e0e2af3e831c071070a1c8efeeaad3c3</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-21 05:02:33</sys_updated_on>
+        <table>sp_widget</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>

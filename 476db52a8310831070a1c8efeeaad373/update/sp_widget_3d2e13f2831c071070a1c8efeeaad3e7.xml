@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
+    <sp_widget action="INSERT_OR_UPDATE">
+        <category>custom</category>
+        <client_script><![CDATA[c.checkAvailability = function(hallId, startDate, endDate) {
+    if (!startDate || !endDate) {
+        // Find the hall and set its message
+        angular.forEach(data.halls, function(hall) {
+            if (hall.sys_id == hallId) {
+                hall.availabilityMessage = 
+                'Please select both start and end dates.';
+            }
+        });
+        $scope.$apply();
+        return;
+    }
+    
+    var ga = new GlideAjax('SportsHallAvailabilityAjax');
+    ga.addParam('sysparm_name', 'checkAvailability');
+    ga.addParam('sysparm_hall_id', hallId);
+    ga.addParam('sysparm_start_date', startDate);
+    ga.addParam('sysparm_end_date', endDate);
+    
+    ga.getXMLAnswer(function(response) {
+        // Find the specific hall and update its message
+        angular.forEach($scope.data.halls, function(hall) {
+            if (hall.sys_id == hallId) {
+                hall.availabilityMessage = response == 'available' ?
+                'Hall is available!' :
+                'Sorry, this hall is already booked for the selected time.';
+            }
+        });
+        $scope.$apply();
+    });
+};]]></client_script>
+        <controller_as>c</controller_as>
+        <css>.sports-hall-list {
+  padding: 10px;
+  
+  h3 {
+    color: #00695C;
+    font-weight: bold;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #00695C;
+  }
+  
+  .filter-section input {
+    border-radius: 20px;
+    border: 1px solid #00695C;
+    padding: 8px 15px;
+    
+    &amp;:focus {
+      outline: none;
+      box-shadow: 0 0 5px rgba(0,105,92,0.3);
+    }
+  }
+  
+  .hall-card {
+    border: none !important;
+    border-radius: 12px !important;
+    padding: 18px !important;
+    margin-bottom: 15px !important;
+    background: white !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+    transition: box-shadow 0.2s ease;
+    
+    &amp;:hover {
+      box-shadow: 0 4px 16px rgba(0,0,0,0.15) !important;
+    }
+    
+    h4 {
+      font-weight: bold;
+      font-size: 16px;
+    }
+    
+    .btn-primary {
+      background: #00695C;
+      border: none;
+      border-radius: 20px;
+      padding: 6px 20px;
+      
+      &amp;:hover {
+        background: #004D40;
+      }
+    }
+    
+    .btn-info {
+      border-radius: 20px;
+      padding: 4px 15px;
+      font-size: 12px;
+    }
+    
+    .btn-default {
+      border-radius: 20px;
+      padding: 6px 20px;
+    }
+  }
+}</css>
+        <data_table>sp_instance</data_table>
+        <demo_data/>
+        <description/>
+        <docs/>
+        <field_list/>
+        <has_preview>false</has_preview>
+        <id>sports_hall_availability</id>
+        <internal>false</internal>
+        <link><![CDATA[function link(scope, element, attrs, controller) {  }]]></link>
+        <name>Sports Hall Availability</name>
+        <option_schema/>
+        <public>false</public>
+        <roles/>
+        <script><![CDATA[(function() {
+    // Get all available sports halls
+    var gr = new GlideRecord('x_1954179_sports_0_sports_hall');
+    gr.addActiveQuery();
+    gr.orderBy('hall_name');
+    gr.query();
+    
+    data.halls = [];
+    
+    while (gr.next()) {
+        var hall = {
+            sys_id: gr.getUniqueValue(),
+            name: gr.getValue('hall_name'),
+            location: gr.getValue('location'),
+            capacity: gr.getValue('capacity'),
+            facilities: gr.getValue('facilities'),
+            available: true // default
+        };
+        
+        // Check if hall has any active bookings today
+        var booking = new GlideRecord('x_1954179_sports_0_sports_hall_booking');
+        booking.addQuery('sports_hall', gr.getUniqueValue());
+        booking.addQuery('status', 'Approved');
+        
+        // Check if current time falls within any booking
+        var now = new GlideDateTime();
+        booking.addQuery('start_date', '<=', now);
+        booking.addQuery('end_date', '>=', now);
+        booking.query();
+        
+        if (booking.next()) {
+            hall.available = false;
+        }
+        
+        data.halls.push(hall);
+    }
+})();]]></script>
+        <servicenow>false</servicenow>
+        <sys_class_name>sp_widget</sys_class_name>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-21 04:41:53</sys_created_on>
+        <sys_id>3d2e13f2831c071070a1c8efeeaad3e7</sys_id>
+        <sys_mod_count>2</sys_mod_count>
+        <sys_name>Sports Hall Availability</sys_name>
+        <sys_package display_value="Sports Hall Booking System" source="x_1954179_sports_0">476db52a8310831070a1c8efeeaad373</sys_package>
+        <sys_policy/>
+        <sys_scope display_value="Sports Hall Booking System">476db52a8310831070a1c8efeeaad373</sys_scope>
+        <sys_update_name>sp_widget_3d2e13f2831c071070a1c8efeeaad3e7</sys_update_name>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-22 02:52:05</sys_updated_on>
+        <template><![CDATA[<div class="sports-hall-list">
+  <h3>Available Sports Halls</h3>
+  
+  <!-- Filter Section -->
+  <div class="filter-section" style="margin-bottom: 15px;">
+    <input type="text" 
+           class="form-control" 
+           ng-model="c.searchText" 
+           placeholder="Search by name or location..."/>
+  </div>
+  
+  <!-- Hall Cards -->
+  <div ng-repeat="hall in data.halls | filter:c.searchText"
+       class="hall-card"
+       style="border: 1px solid #ddd; 
+              border-radius: 8px; 
+              padding: 15px; 
+              margin-bottom: 10px;
+              background: white;">
+              
+    <!-- Hall Name and Badge -->
+    <div style="display: flex; 
+                justify-content: space-between; 
+                align-items: center;">
+      <h4 style="margin: 0; color: #333;">
+        {{hall.name}}
+      </h4>
+      <span ng-if="hall.available"
+            style="background: #4CAF50; 
+                   color: white; 
+                   padding: 4px 10px; 
+                   border-radius: 12px; 
+                   font-size: 12px;">
+        Available
+      </span>
+      <span ng-if="!hall.available"
+            style="background: #f44336; 
+                   color: white; 
+                   padding: 4px 10px; 
+                   border-radius: 12px; 
+                   font-size: 12px;">
+        Booked Now
+      </span>
+    </div>
+    
+    <!-- Hall Details -->
+    <p style="margin: 8px 0; color: #666;">
+      <i>]]>📍<![CDATA[ {{hall.location}}</i>
+    </p>
+    <p style="margin: 4px 0; color: #666;">
+      Capacity: {{hall.capacity}}
+    </p>
+    <p style="margin: 4px 0; color: #666;">
+      Facilities: {{hall.facilities}}
+    </p>
+
+    <!-- Availability Checker (inside each card) -->
+    <div style="margin-top: 10px; 
+                padding: 10px; 
+                background: #f9f9f9; 
+                border-radius: 6px;">
+      <p style="font-weight: bold; margin-bottom: 8px;">
+        Check Availability:
+      </p>
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <input type="datetime-local" 
+               class="form-control"
+               style="width: auto;"
+               ng-model="hall.startDate"/>
+        <input type="datetime-local" 
+               class="form-control"
+               style="width: auto;"
+               ng-model="hall.endDate"/>
+        <button class="btn btn-info btn-sm"
+                style="margin-top: 5px;"
+                ng-click="c.checkAvailability(
+                    hall.sys_id, hall.startDate, hall.endDate)">
+          Check
+        </button>
+      </div>
+      <p ng-if="hall.availabilityMessage"
+         style="margin-top: 8px; font-weight: bold;"
+         ng-style="{'color': hall.availabilityMessage == 
+                    'Hall is available!' ? 'green' : 'red'}">
+        {{hall.availabilityMessage}}
+      </p>
+    </div>
+    
+    <!-- Book Now Button -->
+    <button ng-if="hall.available"
+            class="btn btn-primary"
+            style="margin-top: 10px;"
+            ng-click="c.bookHall(hall.sys_id)">
+      Book Now
+    </button>
+    <button ng-if="!hall.available"
+            class="btn btn-default"
+            style="margin-top: 10px;"
+            disabled>
+      Currently Unavailable
+    </button>
+
+  </div>
+  <!-- End ng-repeat -->
+  
+  <!-- No results -->
+  <div ng-if="data.halls.length == 0"
+       style="text-align: center; 
+              padding: 20px; 
+              color: #999;">
+    No sports halls found.
+  </div>
+</div>]]></template>
+    </sp_widget>
+    <sys_es_latest_script action="INSERT_OR_UPDATE">
+        <id>3d2e13f2831c071070a1c8efeeaad3e7</id>
+        <sys_created_by>admin</sys_created_by>
+        <sys_created_on>2026-04-21 04:41:53</sys_created_on>
+        <sys_id>392ed3f2831c071070a1c8efeeaad3fe</sys_id>
+        <sys_mod_count>0</sys_mod_count>
+        <sys_updated_by>admin</sys_updated_by>
+        <sys_updated_on>2026-04-21 04:41:53</sys_updated_on>
+        <table>sp_widget</table>
+        <use_es_latest>true</use_es_latest>
+    </sys_es_latest_script>
+</record_update>
