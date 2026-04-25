@@ -16,43 +16,56 @@
     c.successMessage = '';
     c.errorMessage = '';
     
-    // Check Availability
+    // Read URL parameters on load
+    function getUrlParam(name) {
+        var url = window.location.search;
+        var params = new URLSearchParams(url);
+        return params.get(name);
+    }
+    
+    // Auto-fill from URL params
+    var hallId = getUrlParam('hallId');
+    var startDate = getUrlParam('startDate');
+    var endDate = getUrlParam('endDate');
+    
+    if (hallId) c.form.hallId = hallId;
+    if (startDate) c.form.startDate = decodeURIComponent(startDate);
+    if (endDate) c.form.endDate = decodeURIComponent(endDate);
+    
     c.checkAvailability = function() {
         c.availabilityMessage = '';
         c.isAvailable = false;
         
         if (!c.form.hallId || !c.form.startDate || !c.form.endDate) {
-            c.availabilityMessage = 
-            'Please select a hall, start date, and end date first.';
+            c.availabilityMessage = 'Please select a hall, start date, and end date first.';
             return;
         }
         
-        if (c.form.endDate <= c.form.startDate) {
-            c.availabilityMessage = 
-            'End Date must be after Start Date.';
+        var start = new Date(c.form.startDate);
+        var end = new Date(c.form.endDate);
+        
+        if (end <= start) {
+            c.availabilityMessage = 'End Date must be after Start Date.';
             return;
         }
         
-        var ga = new GlideAjax('SportsHallAvailabilityAjax');
-        ga.addParam('sysparm_name', 'checkAvailability');
-        ga.addParam('sysparm_hall_id', c.form.hallId);
-        ga.addParam('sysparm_start_date', c.form.startDate);
-        ga.addParam('sysparm_end_date', c.form.endDate);
-        
-        ga.getXMLAnswer(function(response) {
-            if (response == 'available') {
+        c.server.get({
+            action: 'checkAvailability',
+            hallId: c.form.hallId,
+            startDate: c.form.startDate,
+            endDate: c.form.endDate
+        }).then(function(response) {
+            if (response.data.availability == 'available') {
                 c.availabilityMessage = 'Hall is available for your selected dates!';
                 c.isAvailable = true;
             } else {
-                c.availabilityMessage = 
-                'Sorry, this hall is already booked for the selected time.';
+                c.availabilityMessage = 'Sorry, this hall is already booked for the selected time.';
                 c.isAvailable = false;
             }
             $scope.$apply();
         });
     };
     
-    // Submit Booking
     c.submitBooking = function() {
         if (!c.isAvailable) {
             c.errorMessage = 'Please check availability first.';
@@ -67,17 +80,9 @@
             purpose: c.form.purpose
         }).then(function(response) {
             if (response.data.result == 'success') {
-                c.successMessage = 
-                'Booking submitted successfully! Reference: ' 
-                + response.data.number;
+                c.successMessage = 'Booking submitted! Reference: ' + response.data.number;
                 c.errorMessage = '';
-                // Reset form
-                c.form = {
-                    hallId: '',
-                    startDate: '',
-                    endDate: '',
-                    purpose: ''
-                };
+                c.form = { hallId: '', startDate: '', endDate: '', purpose: '' };
                 c.isAvailable = false;
                 c.availabilityMessage = '';
             } else {
@@ -86,6 +91,13 @@
             $scope.$apply();
         });
     };
+    
+    $scope.$on('hallSelected', function(event, data) {
+        c.form.hallId = data.hallId;
+        if (data.startDate) c.form.startDate = data.startDate;
+        if (data.endDate) c.form.endDate = data.endDate;
+        $scope.$apply();
+    });
 };]]></client_script>
         <controller_as>c</controller_as>
         <css>.booking-form-container {
@@ -162,37 +174,60 @@
         <public>false</public>
         <roles/>
         <script><![CDATA[(function() {
+    // Handle availability check
+    if (input && input.action == 'checkAvailability') {
+        var hallId = input.hallId;
+        var startDate = input.startDate;
+        var endDate = input.endDate;
+        
+        gs.info('Checking: hall=' + hallId + ' start=' + startDate + ' end=' + endDate);
+        
+        var checkGr = new GlideRecord('x_1954179_sports_0_sports_hall_booking');
+        checkGr.addQuery('sports_hall', hallId);
+        checkGr.addQuery('status', 'Approved');
+        checkGr.query();
+        
+        var isBooked = false;
+        while (checkGr.next()) {
+            var existingStart = checkGr.getValue('start_date');
+            var existingEnd = checkGr.getValue('end_date');
+            gs.info('Existing: ' + existingStart + ' to ' + existingEnd);
+            if (startDate < existingEnd && endDate > existingStart) {
+                isBooked = true;
+                break;
+            }
+        }
+        
+        data.availability = isBooked ? 'unavailable' : 'available';
+        gs.info('Result: ' + data.availability);
+        return;
+    }
+    
     // Handle booking submission
     if (input && input.action == 'submitBooking') {
-        var gr = new GlideRecord(
-            'x_1954179_sports_0_sports_hall_booking'
-        );
-        gr.initialize();
-        gr.setValue('sports_hall', input.hallId);
-        gr.setValue('requested_by', gs.getUserID());
-        gr.setValue('start_date', input.startDate);
-        gr.setValue('end_date', input.endDate);
-        gr.setValue('purpose', input.purpose);
-        gr.setValue('status', 'Pending');
-        var sysId = gr.insert();
+        var bookGr = new GlideRecord('x_1954179_sports_0_sports_hall_booking');
+        bookGr.initialize();
+        bookGr.setValue('sports_hall', input.hallId);
+        bookGr.setValue('requested_by', gs.getUserID());
+        bookGr.setValue('start_date', input.startDate);
+        bookGr.setValue('end_date', input.endDate);
+        bookGr.setValue('purpose', input.purpose);
+        bookGr.setValue('status', 'Pending');
+        var sysId = bookGr.insert();
         
         if (sysId) {
-            // Get the booking number
-            var booking = new GlideRecord(
-                'x_1954179_sports_0_sports_hall_booking'
-            );
-            booking.get(sysId);
+            var confirmGr = new GlideRecord('x_1954179_sports_0_sports_hall_booking');
+            confirmGr.get(sysId);
             data.result = 'success';
-            data.number = booking.getValue('number');
+            data.number = confirmGr.getValue('number');
         } else {
             data.result = 'error';
         }
         return;
     }
     
-    // Load sports halls for dropdown
+    // Load ALL sports halls for dropdown
     var gr = new GlideRecord('x_1954179_sports_0_sports_hall');
-    gr.addQuery('available', true);
     gr.orderBy('hall_name');
     gr.query();
     
@@ -209,14 +244,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-04-21 05:02:33</sys_created_on>
         <sys_id>ece2af3e831c071070a1c8efeeaad3be</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>14</sys_mod_count>
         <sys_name>Sports Hall Booking Form</sys_name>
         <sys_package display_value="Sports Hall Booking System" source="x_1954179_sports_0">476db52a8310831070a1c8efeeaad373</sys_package>
         <sys_policy/>
         <sys_scope display_value="Sports Hall Booking System">476db52a8310831070a1c8efeeaad373</sys_scope>
         <sys_update_name>sp_widget_ece2af3e831c071070a1c8efeeaad3be</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-04-22 02:52:42</sys_updated_on>
+        <sys_updated_on>2026-04-25 09:52:11</sys_updated_on>
         <template><![CDATA[<div class="booking-form-container">
   <div style="padding: 20px; 
             background: white; 

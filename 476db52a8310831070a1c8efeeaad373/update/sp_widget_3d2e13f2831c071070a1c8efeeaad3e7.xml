@@ -1,36 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?><record_update table="sp_widget">
     <sp_widget action="INSERT_OR_UPDATE">
         <category>custom</category>
-        <client_script><![CDATA[c.checkAvailability = function(hallId, startDate, endDate) {
-    if (!startDate || !endDate) {
-        // Find the hall and set its message
-        angular.forEach(data.halls, function(hall) {
-            if (hall.sys_id == hallId) {
-                hall.availabilityMessage = 
-                'Please select both start and end dates.';
-            }
+        <client_script><![CDATA[api.controller = function($scope) {
+    var c = this;
+    c.searchText = '';
+    
+    c.checkAvailability = function(hallId, startDate, endDate) {
+        if (!startDate || !endDate) {
+            angular.forEach($scope.data.halls, function(hall) {
+                if (hall.sys_id == hallId) {
+                    hall.availabilityMessage = 'Please select both start and end dates.';
+                }
+            });
+            $scope.$apply();
+            return;
+        }
+        
+        c.server.get({
+            action: 'checkAvailability',
+            hallId: hallId,
+            startDate: startDate,
+            endDate: endDate
+        }).then(function(response) {
+            angular.forEach($scope.data.halls, function(hall) {
+                if (hall.sys_id == hallId) {
+                    hall.availabilityMessage = response.data.availability == 'available' ?
+                    'Hall is available!' :
+                    'Sorry, this hall is already booked for the selected time.';
+                }
+            });
+            $scope.$apply();
         });
-        $scope.$apply();
-        return;
+    };
+    
+c.bookHall = function(hallId, startDate, endDate) {
+    // Redirect to booking page with hall and dates in URL
+    var url = '?id=sports_booking' + 
+              '&hallId=' + hallId;
+    
+    if (startDate) {
+        url += '&startDate=' + encodeURIComponent(startDate);
+    }
+    if (endDate) {
+        url += '&endDate=' + encodeURIComponent(endDate);
     }
     
-    var ga = new GlideAjax('SportsHallAvailabilityAjax');
-    ga.addParam('sysparm_name', 'checkAvailability');
-    ga.addParam('sysparm_hall_id', hallId);
-    ga.addParam('sysparm_start_date', startDate);
-    ga.addParam('sysparm_end_date', endDate);
-    
-    ga.getXMLAnswer(function(response) {
-        // Find the specific hall and update its message
-        angular.forEach($scope.data.halls, function(hall) {
-            if (hall.sys_id == hallId) {
-                hall.availabilityMessage = response == 'available' ?
-                'Hall is available!' :
-                'Sorry, this hall is already booked for the selected time.';
-            }
-        });
-        $scope.$apply();
-    });
+    window.location.href = url;
+};
 };]]></client_script>
         <controller_as>c</controller_as>
         <css>.sports-hall-list {
@@ -110,30 +126,55 @@
         <public>false</public>
         <roles/>
         <script><![CDATA[(function() {
-    // Get all available sports halls
-    var gr = new GlideRecord('x_1954179_sports_0_sports_hall');
-    gr.addActiveQuery();
-    gr.orderBy('hall_name');
+    // Handle availability check
+    if (input && input.action == 'checkAvailability') {
+    var hallId = input.hallId;
+    var startDate = input.startDate;
+    var endDate = input.endDate;
+    
+    gs.info('Checking: hall=' + hallId + ' start=' + startDate + ' end=' + endDate, 'AvailabilityCheck');
+    
+    var gr = new GlideRecord('x_1954179_sports_0_sports_hall_booking');
+    gr.addQuery('sports_hall', hallId);
+    gr.addQuery('status', 'Approved');
     gr.query();
     
-    data.halls = [];
-    
+    var isBooked = false;
     while (gr.next()) {
+        var existingStart = gr.getValue('start_date');
+        var existingEnd = gr.getValue('end_date');
+        gs.info('Existing: ' + existingStart + ' to ' + existingEnd, 'AvailabilityCheck');
+        if (startDate < existingEnd && endDate > existingStart) {
+            isBooked = true;
+            break;
+        }
+    }
+    
+    data.availability = isBooked ? 'unavailable' : 'available';
+    gs.info('Result: ' + data.availability, 'AvailabilityCheck');
+    return;
+}
+    
+    // Load halls
+    var grbook = new GlideRecord('x_1954179_sports_0_sports_hall');
+    grbook.addActiveQuery();
+    grbook.orderBy('hall_name');
+    grbook.query();
+    
+    data.halls = [];
+    while (grbook.next()) {
         var hall = {
-            sys_id: gr.getUniqueValue(),
-            name: gr.getValue('hall_name'),
-            location: gr.getValue('location'),
-            capacity: gr.getValue('capacity'),
-            facilities: gr.getValue('facilities'),
-            available: true // default
+            sys_id: grbook.getUniqueValue(),
+            name: grbook.getValue('hall_name'),
+            location: grbook.getValue('location'),
+            capacity: grbook.getValue('capacity'),
+            facilities: grbook.getValue('facilities'),
+            available: true
         };
         
-        // Check if hall has any active bookings today
         var booking = new GlideRecord('x_1954179_sports_0_sports_hall_booking');
-        booking.addQuery('sports_hall', gr.getUniqueValue());
+        booking.addQuery('sports_hall', grbook.getUniqueValue());
         booking.addQuery('status', 'Approved');
-        
-        // Check if current time falls within any booking
         var now = new GlideDateTime();
         booking.addQuery('start_date', '<=', now);
         booking.addQuery('end_date', '>=', now);
@@ -151,14 +192,14 @@
         <sys_created_by>admin</sys_created_by>
         <sys_created_on>2026-04-21 04:41:53</sys_created_on>
         <sys_id>3d2e13f2831c071070a1c8efeeaad3e7</sys_id>
-        <sys_mod_count>2</sys_mod_count>
+        <sys_mod_count>9</sys_mod_count>
         <sys_name>Sports Hall Availability</sys_name>
         <sys_package display_value="Sports Hall Booking System" source="x_1954179_sports_0">476db52a8310831070a1c8efeeaad373</sys_package>
         <sys_policy/>
         <sys_scope display_value="Sports Hall Booking System">476db52a8310831070a1c8efeeaad373</sys_scope>
         <sys_update_name>sp_widget_3d2e13f2831c071070a1c8efeeaad3e7</sys_update_name>
         <sys_updated_by>admin</sys_updated_by>
-        <sys_updated_on>2026-04-22 02:52:05</sys_updated_on>
+        <sys_updated_on>2026-04-25 09:46:38</sys_updated_on>
         <template><![CDATA[<div class="sports-hall-list">
   <h3>Available Sports Halls</h3>
   
@@ -248,12 +289,12 @@
     </div>
     
     <!-- Book Now Button -->
-    <button ng-if="hall.available"
-            class="btn btn-primary"
-            style="margin-top: 10px;"
-            ng-click="c.bookHall(hall.sys_id)">
-      Book Now
-    </button>
+   <button ng-if="hall.available"
+        class="btn btn-primary"
+        style="margin-top: 10px;"
+        ng-click="c.bookHall(hall.sys_id, hall.startDate, hall.endDate)">
+  Book Now
+</button>
     <button ng-if="!hall.available"
             class="btn btn-default"
             style="margin-top: 10px;"
